@@ -40,19 +40,42 @@ test('a prompt already in English is left alone', { options: { apiKey: 'test-key
   expect(result.text).toBe('Please fix the failing test.')
 })
 
-test('an English reply is shown with a Chinese translation beneath it', { options: { apiKey: 'test-key' } }, async ($, on) => {
-  on('http.fetch', () => DEEPSEEK_OK('重构完成,所有测试通过。'))
+test('an English reply is drawn with its Chinese translation as markdown', { options: { apiKey: 'test-key' } }, async ($, on) => {
+  const chinese = '**重构完成**。\n\n| 项 | 状态 |\n|---|---|\n| 测试 | 通过 |'
+  on('http.fetch', () => DEEPSEEK_OK(chinese))
   on('turn.complete', (_, e) => ({ text: e.answer }))
 
-  const result = await $.turn.complete({
-    answer: 'The refactor is done and all tests pass.',
+  let drawn = ''
+  on('ui.render', { component: 'AssistantMessage' }, ($, e) => {
+    drawn = e.props.text
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.text}</Text>
+  })
+
+  const answer = 'The refactor is done and all tests pass.'
+  await $.turn.complete({
+    answer,
     durationMs: 1200,
     isAborted: false,
     turnId: 'turn-1',
     reason: 'answer',
   })
 
-  expect(result.text).toBe('重构完成,所有测试通过。')
+  await $.ui.render({
+    surface: 'terminal',
+    component: 'AssistantMessage',
+    requestId: 'msg-1',
+    props: { text: answer, isFirstOfReply: true },
+  })
+  expect(drawn).toBe(`${answer}\n\n---\n\n${chinese}`)
+
+  await $.ui.render({
+    surface: 'terminal',
+    component: 'AssistantMessage',
+    requestId: 'msg-2',
+    props: { text: 'A message no translation was stored for.', isFirstOfReply: true },
+  })
+  expect(drawn).toBe('A message no translation was stored for.')
 })
 
 test('a reply already in Chinese is left alone', { options: { apiKey: 'test-key' } }, async ($, on) => {
@@ -94,4 +117,15 @@ test('a failed API call leaves the prompt unchanged', { options: { apiKey: 'test
   const result = await $.prompt.submit({ text: '帮我看下日志', wait: false, origin: { kind: 'composer' } })
 
   expect(result.text).toBe('帮我看下日志')
+})
+
+test('the enabled option turns the plugin off', { options: { apiKey: 'test-key', enabled: false } }, async ($, on) => {
+  on('http.fetch', () => {
+    throw new Error('a disabled plugin must not call the API')
+  })
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  const result = await $.prompt.submit({ text: '你好', wait: false, origin: { kind: 'composer' } })
+
+  expect(result.text).toBe('你好')
 })

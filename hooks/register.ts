@@ -1,4 +1,7 @@
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
+
+import type { TranslationEntry } from '../types'
 
 const CJK = /[㐀-鿿豈-﫿]/
 const LATIN = /[A-Za-z]/
@@ -10,6 +13,12 @@ const REPLY_INSTRUCTION =
   'Translate the assistant message from English to Simplified Chinese. Keep the Markdown structure; leave code blocks, inline code, file paths and commands untranslated. Reply with the translation only: no explanation.'
 
 const NAME = 'deepseek-translate'
+const MAX_ENTRIES = 20
+
+const translations = atom(
+  { plugin: 'deepseek-translate', key: 'translations' } as const,
+  [] as TranslationEntry[],
+)
 
 type DeepseekConfig = {
   readonly apiKey: string
@@ -80,6 +89,10 @@ async function translate(
 }
 
 export const register: Register = (on, options) => {
+  if (options.enabled === false) {
+    return
+  }
+
   const config: DeepseekConfig = {
     apiKey: typeof options.apiKey === 'string' ? options.apiKey.trim() : '',
     model:
@@ -127,9 +140,25 @@ export const register: Register = (on, options) => {
       if (chinese === undefined || chinese === e.answer) {
         return done
       }
-      return { ...done, text: chinese }
+      await update($, translations, entries => {
+        const kept = (entries ?? []).filter(entry => entry.source !== e.answer)
+        return [...kept, { source: e.answer, text: chinese }].slice(-MAX_ENTRIES)
+      })
     } catch {
-      return done
+      // A failed translation leaves the reply as it is.
     }
+    return done
+  })
+
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
+    const entries = (await read($, translations)) ?? []
+    const hit = entries.find(entry => entry.source === e.props.text)
+    if (hit === undefined) {
+      return next(e)
+    }
+    return next({
+      ...e,
+      props: { ...e.props, text: `${e.props.text}\n\n---\n\n${hit.text}` },
+    })
   })
 }

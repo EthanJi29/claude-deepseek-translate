@@ -1,9 +1,16 @@
 {
   "name": "deepseek-translate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "description": "Translates Chinese prompts to English before the model sees them, and the model's English replies back to Chinese beneath them, via the DeepSeek API.",
+  "types": "./types/index.d.ts",
   "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Translation enabled",
+      "description": "Turn the translation on or off without disabling the plugin.",
+      "default": true
+    },
     "apiKey": {
       "type": "string",
       "title": "DeepSeek API key",

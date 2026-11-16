@@ -1,0 +1,26 @@
+{
+  "name": "deepseek-translate",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Translates Chinese prompts to English before the model sees them, and the model's English replies back to Chinese beneath them, via the DeepSeek API.",
+  "userConfig": {
+    "apiKey": {
+      "type": "string",
+      "title": "DeepSeek API key",
+      "description": "Used to call the DeepSeek API. Leave empty to read DEEPSEEK_API_KEY from the environment.",
+      "sensitive": true
+    },
+    "model": {
+      "type": "string",
+      "title": "DeepSeek model",
+      "description": "Model id sent to the API.",
+      "default": "deepseek-chat"
+    },
+    "baseUrl": {
+      "type": "string",
+      "title": "API base URL",
+      "description": "OpenAI-compatible base URL.",
+      "default": "https://api.deepseek.com"
+    }
+  }
+}

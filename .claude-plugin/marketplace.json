@@ -1,0 +1,12 @@
+{
+  "name": "deepseek-translate-local",
+  "owner": {
+    "name": "ethanji29"
+  },
+  "plugins": [
+    {
+      "name": "deepseek-translate",
+      "source": "./"
+    }
+  ]
+}
